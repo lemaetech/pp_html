@@ -14,7 +14,7 @@ type node =
       ; children : node list
       }
 
-and attributes = (string * string) list [@@deriving sexp_of]
+and attributes = (string * string option) list [@@deriving sexp_of]
 
 let parse s = Text s
 
@@ -28,5 +28,5 @@ let pp fmt = function
 
 let%expect_test "element" =
   parse "<html></html>" |> pp Format.std_formatter;
-  [%expect {||}]
+  [%expect {| <html></html> |}]
 ;;
