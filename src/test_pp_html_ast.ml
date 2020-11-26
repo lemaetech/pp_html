@@ -37,13 +37,17 @@ let%expect_test "text, nodes, comments, children" =
 ;;
 
 let%expect_test "text, nodes, comments, children" =
-  test_pp {|<html><body><div>Hello World!</div></body></html>|};
-  [%expect {|
+  test_pp {|<html><body><div>Hello World!</div><div>Welcome!</div></body></html>|};
+  [%expect
+    {|
     <html>
       <body>
-        <div>
-          Hello World!
-        </div>
+         <div>
+           Hello World!
+         </div>
+         <div>
+           Welcome!
+         </div>
       </body>
     </html> |}]
 ;;
