@@ -1,5 +1,6 @@
 module P = Reparse.Parser
 open Sexplib.Std
+open P
 open P.Infix
 
 type node =
@@ -21,29 +22,25 @@ let sp = Printf.sprintf
 let skip_ws at_least = P.(skip ~at_least (any [ htab; lf; char '\x0C'; cr; space ]))
 
 let comments =
-  let open P in
   take_between ~start:(string "<!--") ~end_:(string "-->") next
   >>= string_of_chars
   >|= fun s -> Comments s
 ;;
 
 let doctype =
-  let open P in
   take_between
     next
     ~start:(string ~case_sensitive:false "<!DOCTYPE" *> skip_ws 1)
     ~end_:(char '>')
-  *> unit
+  >>= string_of_chars
 ;;
 
 let text =
-  let open P in
   let* txt = take_while next ~while_:(is_not @@ char '<') >>= string_of_chars in
   if String.length txt > 0 then pure @@ Text txt else fail "Invalid HTML text node"
 ;;
 
 let node =
-  let open P in
   (* Void elements - https://html.spec.whatwg.org/multipage/syntax.html#void-elements *)
   let is_void = function
     | "area"
@@ -63,8 +60,6 @@ let node =
     | _ -> false
   in
   recur (fun node ->
-      (* Parse and discard doctype node *)
-      let* () = (optional @@ doctype) *> unit in
       (* 
          tag_name - https://html.spec.whatwg.org/multipage/syntax.html#syntax-tag-name
          start_tags - https://html.spec.whatwg.org/multipage/syntax.html#start-tags
@@ -93,7 +88,14 @@ let node =
       <* skip_ws 0)
 ;;
 
-let parse s = P.parse_string node s
+let parse s =
+  let p =
+    let* doctype_txt = optional doctype in
+    let+ root = node in
+    doctype_txt, root
+  in
+  P.parse_string p s
+;;
 
 module F = Format
 
