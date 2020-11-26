@@ -1,0 +1,6 @@
+(library
+ (name pp_html)
+ (libraries reparse sexplib sexp_pretty easy-format)
+ (inline_tests)
+ (preprocess
+  (pps ppx_expect ppx_sexp_conv)))
