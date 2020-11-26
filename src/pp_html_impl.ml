@@ -101,7 +101,7 @@ module E = Easy_format
 
 let list_style =
   { E.list with
-    wrap_body = `Never_wrap
+    wrap_body = `Force_breaks
   ; space_after_opening = false
   ; space_before_closing = false
   ; separators_stick_left = false
