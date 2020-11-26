@@ -97,12 +97,29 @@ let parse s =
   P.parse_string p s
 ;;
 
+module E = Easy_format
+
+let list_style =
+  { E.list with
+    wrap_body = `Never_wrap
+  ; space_after_opening = false
+  ; space_before_closing = false
+  ; separators_stick_left = false
+  ; align_closing = true
+  }
+;;
+
+let rec easy_format = function
+  | Text txt -> E.Atom (txt, E.atom)
+  | Element { tag_name; children; _ } ->
+    let items = List.map easy_format children in
+    E.List (("<" ^ tag_name ^ ">", "", "</" ^ tag_name ^ ">", list_style), items)
+  | _ -> failwith "not implemented"
+;;
+
 module F = Format
 
-(* module E = Easy_format *)
-
-let pp fmt = function
-  | Text txt -> F.fprintf fmt "%s" txt
-  | Element { tag_name; _ } -> F.fprintf fmt "<%s>" tag_name
-  | _ -> ()
+let pp fmt node =
+  let ef = easy_format node in
+  E.Pretty.to_formatter fmt ef
 ;;

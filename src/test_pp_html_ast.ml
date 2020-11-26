@@ -13,6 +13,11 @@ let test_ast s =
   pp_sexp @@ sexp_of_node node
 ;;
 
+let test_pp s =
+  let _, node = parse s in
+  pp Format.std_formatter node
+;;
+
 let%expect_test "text, nodes, comments, children" =
   test_ast {|<html><body><div>Hello World!</div></body></html>|};
   [%expect
@@ -29,4 +34,9 @@ let%expect_test "text, nodes, comments, children" =
           (tag_name div)
           (attributes ())
           (children ((Text "Hello World!")))))))))) |}]
+;;
+
+let%expect_test "text, nodes, comments, children" =
+  test_pp {|<html><body><div>Hello World!</div></body></html>|};
+  [%expect {| <html><body><div>Hello World!</div></body></html> |}]
 ;;
