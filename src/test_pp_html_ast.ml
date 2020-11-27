@@ -19,7 +19,7 @@ let test_pp s =
 ;;
 
 let%expect_test "text, nodes, comments, children" =
-  test_ast {|<html><body><div>Hello World!</div></body></html>|};
+  test_ast {|<html><body><div class="class1" id="id1">Hello World!</div></body></html>|};
   [%expect
     {|
     (Element
@@ -32,22 +32,25 @@ let%expect_test "text, nodes, comments, children" =
         (children ((
           Element
           (tag_name div)
-          (attributes ())
+          (attributes (
+            (Attr (class (class1)))
+            (Attr (id    (id1)))))
           (children ((Text "Hello World!")))))))))) |}]
 ;;
 
-let%expect_test "text, nodes, comments, children" =
-  test_pp {|<html><body><div>Hello World!</div><div>Welcome!</div></body></html>|};
+let%expect_test "text, nodes, comments, children " =
+  test_pp {|<html><body><div class="class1" id="id1">Hello World!</div></body></html>|};
   [%expect
     {|
     <html>
       <body>
-         <div>
-           Hello World!
-         </div>
-         <div>
-           Welcome!
-         </div>
+
+           <div class = class1 id = id1>
+
+             Hello World!
+
+           </div>
+
       </body>
     </html> |}]
 ;;
