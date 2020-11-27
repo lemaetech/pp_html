@@ -171,7 +171,14 @@ and format_attribute (Attr (attr_name, attr_val)) =
 
 module F = Format
 
-let pp fmt node =
-  let ef = format_node node in
-  E.Pretty.to_formatter fmt ef
+let pp fmt (T { doctype; root }) =
+  let doc =
+    match doctype with
+    | Some s ->
+      E.List
+        ( ("", "", "", list_style)
+        , [ atom' @@ sprintf "<!DOCTYPE %s>" s; format_node root ] )
+    | None -> format_node root
+  in
+  E.Pretty.to_formatter fmt doc
 ;;

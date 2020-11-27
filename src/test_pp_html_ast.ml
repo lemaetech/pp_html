@@ -14,8 +14,8 @@ let test_ast s =
 ;;
 
 let test_pp s =
-  let (T { root; _ }) = parse s in
-  pp Format.std_formatter root
+  let doc = parse s in
+  pp Format.std_formatter doc
 ;;
 
 let%expect_test "text, nodes, comments, children" =
@@ -39,9 +39,11 @@ let%expect_test "text, nodes, comments, children" =
 ;;
 
 let%expect_test "text, nodes, comments, children " =
-  test_pp {|<html><body><div class="class1" id="id1">Hello World!</div></body></html>|};
+  test_pp
+    {|<!DOCTYPE html><html><body><div class="class1" id="id1">Hello World!</div></body></html>|};
   [%expect
     {|
+    <!DOCTYPE html>
     <html>
       <body>
         <div class="class1" id="id1">
