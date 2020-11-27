@@ -153,7 +153,9 @@ let rec format_node = function
   | Element { tag_name; children; attributes } ->
     let children = List.map format_node children in
     if List.length attributes = 0
-    then E.List (("<" ^ tag_name ^ ">", "", "</" ^ tag_name ^ ">", list_style), children)
+    then
+      E.List
+        ((sprintf "<%s>" tag_name, "", sprintf "</%s>" tag_name, list_style), children)
     else (
       let attributes' = List.map format_attribute attributes |> String.concat " " in
       let open_tag = sprintf "<%s %s>" tag_name attributes' in
