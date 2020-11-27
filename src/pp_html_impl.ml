@@ -132,59 +132,58 @@ let parse s =
   P.parse_string p s
 ;;
 
-module E = Easy_format
-
-let list_style =
-  { E.list with
-    wrap_body = `Force_breaks
-  ; space_after_opening = false
-  ; space_after_separator = false
-  ; space_before_separator = false
-  ; space_before_closing = false
-  ; separators_stick_left = false
-  ; align_closing = true
-  }
-;;
-
-let atom' v = E.Atom (v, E.atom)
-
-let rec format_node = function
-  | Text txt -> atom' txt
-  | Comments comments -> atom' @@ sprintf "<!-- %s -->" comments
-  | Void { tag_name; attributes } ->
-    if List.length attributes = 0
-    then atom' @@ sprintf "<%s/>" tag_name
-    else (
-      let attributes' = List.map format_attribute attributes |> String.concat " " in
-      atom' @@ sprintf "<%s %s/>" tag_name attributes')
-  | Element { tag_name; children; attributes } ->
-    let children = List.map format_node children in
-    if List.length attributes = 0
-    then
-      E.List
-        ((sprintf "<%s>" tag_name, "", sprintf "</%s>" tag_name, list_style), children)
-    else (
-      let attributes' = List.map format_attribute attributes |> String.concat " " in
-      let open_tag = sprintf "<%s %s>" tag_name attributes' in
-      let end_tag = sprintf "</%s>" tag_name in
-      E.List ((open_tag, "", end_tag, list_style), children))
-
-and format_attribute (Attr (attr_name, attr_val)) =
-  match attr_val with
-  | Some attr_val -> sprintf {|%s="%s"|} attr_name attr_val
-  | None -> ""
-;;
-
 module F = Format
 
-let pp fmt (T { doctype; root }) =
-  let doc =
-    match doctype with
-    | Some s ->
-      E.List
-        ( ("", "", "", list_style)
-        , [ atom' @@ sprintf "<!DOCTYPE %s>" s; atom' ""; format_node root ] )
-    | None -> format_node root
+let pp_attribute fmt (Attr (attr_name, attr_val)) =
+  match attr_val with
+  | Some v -> F.fprintf fmt {| %s="%s"|} attr_name v
+  | None -> F.fprintf fmt " %s" attr_name
+;;
+
+let pp_attributes fmt attributes =
+  let pp_attributes = F.pp_print_list pp_attribute in
+  F.open_vbox 0;
+  F.fprintf fmt "%a" pp_attributes attributes;
+  F.close_box ()
+;;
+
+let pp_doctype fmt = function
+  | Some txt -> F.fprintf fmt "<!DOCTYPE %s>" txt
+  | None -> ()
+;;
+
+let pp ?(indent = 2) fmt (T { doctype; root }) =
+  let rec pp_node fmt = function
+    | Text txt -> F.fprintf fmt "%s" txt
+    | Comments comments -> F.fprintf fmt "@;<!-- %s -->@;" comments
+    | Void { tag_name; attributes = [] } -> F.fprintf fmt "<%s />" tag_name
+    | Void { tag_name; attributes } ->
+      F.open_vbox indent;
+      F.fprintf fmt "<%s" tag_name;
+      pp_attributes fmt attributes;
+      F.fprintf fmt "/>";
+      F.close_box ()
+    | Element { tag_name; attributes = []; children = [] } ->
+      F.fprintf fmt "@[<h><%s></%s>@]" tag_name tag_name
+    | Element { tag_name; attributes = []; children } ->
+      let pp_children = F.pp_print_list pp_node in
+      F.open_vbox indent;
+      F.fprintf fmt "<%s>@,%a" tag_name pp_children children;
+      F.print_break 0 (-indent);
+      F.fprintf fmt "</%s>" tag_name;
+      F.close_box ()
+    | Element { tag_name; attributes; children } ->
+      let pp_children = F.pp_print_list pp_node in
+      F.open_vbox indent;
+      F.fprintf fmt "<%s%a>@,%a" tag_name pp_attributes attributes pp_children children;
+      F.print_break 0 (-indent);
+      F.fprintf fmt "<%s>" tag_name;
+      F.close_box ()
   in
-  E.Pretty.to_formatter fmt doc
+  F.open_vbox 0;
+  pp_doctype fmt doctype;
+  F.print_break 0 0;
+  F.print_break 0 0;
+  pp_node fmt root;
+  F.close_box ()
 ;;

@@ -22,7 +22,6 @@
   (ocaml
    (>= 4.11.1))
   reparse
-  easy-format
   sexplib
   sexp_pretty
   ppx_sexp_conv

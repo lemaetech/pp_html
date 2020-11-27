@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Pp_html (pp_html.Pp_html)</title><link rel="stylesheet" href="../../odoc.css"/><meta charset="utf-8"/><meta name="generator" content="odoc 1.5.2"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../../highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body><div class="content"><header><nav><a href="../index.html">Up</a> – <a href="../index.html">pp_html</a> &#x00BB; Pp_html</nav><h1>Module <code>Pp_html</code></h1></header><dl><dt class="spec type" id="type-t"><a href="#type-t" class="anchor"></a><code><span class="keyword">type</span> t</code></dt><dd><p>Represents parsed HTML.</p></dd></dl><dl><dt class="spec value" id="val-parse"><a href="#val-parse" class="anchor"></a><code><span class="keyword">val</span> parse : string <span>&#45;&gt;</span> <a href="index.html#type-t">t</a></code></dt><dd><p><code>parse s</code> returns a parsed instance of <code>s</code></p></dd></dl><dl><dt class="spec value" id="val-pp"><a href="#val-pp" class="anchor"></a><code><span class="keyword">val</span> pp : <span>?&#8288;indent:int</span> <span>&#45;&gt;</span> Stdlib.Format.formatter <span>&#45;&gt;</span> <a href="index.html#type-t">t</a> <span>&#45;&gt;</span> unit</code></dt><dd><p><code>pp ~indent fmt t</code> pretty prints <code>t</code> on a given formatter <code>fmt</code>.</p><h5 id="pp_examples"><a href="#pp_examples" class="anchor"></a>Examples</h5><pre><code class="ml">let () =
+  Pp_html.parse
+    {|&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;body&gt;&lt;br&gt; &lt;hr class=&quot;class1&quot; id=&quot;id1&quot;/&gt;&lt;!-- This is a comment --&gt; &lt;div class=&quot;class1&quot; id=&quot;id1&quot;&gt;Hello World!&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;|}
+  |&gt; Pp_html.pp ~indent:4 Format.std_formatter
+;;</code></pre><p>The above outputs the following</p><pre>&lt;!DOCTYPE html&gt;
+
+&lt;html&gt;
+    &lt;body&gt;
+        &lt;br /&gt;
+        &lt;hr class=&quot;class1&quot;
+            id=&quot;id1&quot;/&gt;
+
+        &lt;!--  This is a comment  --&gt;
+
+        &lt;div class=&quot;class1&quot;
+             id=&quot;id1&quot;&gt;
+            Hello World!
+        &lt;div&gt;
+        &lt;div&gt;&lt;/div&gt;
+    &lt;/body&gt;
+&lt;/html&gt;</pre></dd></dl></div></body></html>

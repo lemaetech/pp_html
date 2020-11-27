@@ -15,7 +15,7 @@ let test_ast s =
 
 let test_pp s =
   let doc = parse s in
-  pp Format.std_formatter doc
+  pp ~indent:4 Format.std_formatter doc
 ;;
 
 let%expect_test "text, nodes, comments, children" =
@@ -38,21 +38,26 @@ let%expect_test "text, nodes, comments, children" =
           (children ((Text "Hello World!")))))))))) |}]
 ;;
 
-let%expect_test "text, nodes, comments, children " =
+let%expect_test "PPrint: text, nodes, comments, children " =
   test_pp
-    {|<!DOCTYPE html><html><body><br> <hr /><!-- This is a comment --> <div class="class1" id="id1">Hello World!</div></body></html>|};
+    {|<!DOCTYPE html><html><body><br> <hr class="class1" id="id1"/><!-- This is a comment --> <div class="class1" id="id1">Hello World!</div><div></div></body></html>|};
   [%expect
     {|
     <!DOCTYPE html>
 
     <html>
-      <body>
-        <br/>
-        <hr/>
-        <!--  This is a comment  -->
-        <div class="class1" id="id1">
-          Hello World!
-        </div>
-      </body>
+        <body>
+            <br />
+            <hr class="class1"
+                id="id1"/>
+
+            <!--  This is a comment  -->
+
+            <div class="class1"
+                 id="id1">
+                Hello World!
+            <div>
+            <div></div>
+        </body>
     </html> |}]
 ;;
