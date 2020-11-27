@@ -22,8 +22,5 @@
   (ocaml
    (>= 4.11.1))
   reparse
-  sexplib
-  sexp_pretty
-  ppx_sexp_conv
   (ppx_expect :with-test)
   (ppx_inline_test :with-test)))
