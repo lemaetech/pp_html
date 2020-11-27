@@ -150,6 +150,13 @@ let atom' v = E.Atom (v, E.atom)
 
 let rec format_node = function
   | Text txt -> atom' txt
+  | Comments comments -> atom' @@ sprintf "<!-- %s -->" comments
+  | Void { tag_name; attributes } ->
+    if List.length attributes = 0
+    then atom' @@ sprintf "<%s/>" tag_name
+    else (
+      let attributes' = List.map format_attribute attributes |> String.concat " " in
+      atom' @@ sprintf "<%s %s/>" tag_name attributes')
   | Element { tag_name; children; attributes } ->
     let children = List.map format_node children in
     if List.length attributes = 0
@@ -161,7 +168,6 @@ let rec format_node = function
       let open_tag = sprintf "<%s %s>" tag_name attributes' in
       let end_tag = sprintf "</%s>" tag_name in
       E.List ((open_tag, "", end_tag, list_style), children))
-  | _ -> failwith "not implemented"
 
 and format_attribute (Attr (attr_name, attr_val)) =
   match attr_val with
