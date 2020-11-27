@@ -9,13 +9,13 @@ let pp_sexp =
 ;;
 
 let test_ast s =
-  let _, node = parse s in
-  pp_sexp @@ sexp_of_node node
+  let (T { root; _ }) = parse s in
+  pp_sexp @@ sexp_of_node root
 ;;
 
 let test_pp s =
-  let _, node = parse s in
-  pp Format.std_formatter node
+  let (T { root; _ }) = parse s in
+  pp Format.std_formatter root
 ;;
 
 let%expect_test "text, nodes, comments, children" =
@@ -44,13 +44,9 @@ let%expect_test "text, nodes, comments, children " =
     {|
     <html>
       <body>
-
-           <div class = class1 id = id1>
-
-             Hello World!
-
-           </div>
-
+        <div class="class1" id="id1">
+          Hello World!
+        </div>
       </body>
     </html> |}]
 ;;

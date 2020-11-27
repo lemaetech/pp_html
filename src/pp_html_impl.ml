@@ -3,7 +3,13 @@ open Sexplib.Std
 open P
 open P.Infix
 
-type node =
+type t =
+  | T of
+      { doctype : string option
+      ; root : node
+      }
+
+and node =
   | Text of string
   | Comments of string
   | Void of
@@ -18,7 +24,7 @@ type node =
 
 and attribute = Attr of (string * string option) [@@unboxed] [@@deriving sexp_of]
 
-let sp = Printf.sprintf
+let sprintf = Printf.sprintf
 let skip_ws at_least = P.(skip ~at_least (any [ htab; lf; char '\x0C'; cr; space ]))
 
 let comments =
@@ -28,11 +34,12 @@ let comments =
 ;;
 
 let doctype =
-  take_between
-    next
-    ~start:(string ~case_sensitive:false "<!DOCTYPE" *> skip_ws 1)
-    ~end_:(char '>')
-  >>= string_of_chars
+  optional
+  @@ (take_between
+        next
+        ~start:(string ~case_sensitive:false "<!DOCTYPE" *> skip_ws 1)
+        ~end_:(char '>')
+     >>= string_of_chars)
 ;;
 
 let text =
@@ -95,7 +102,7 @@ let node =
       let* tag_name =
         skip_ws 0 *> char '<' *> take alpha_num
         >>= string_of_chars
-        <?> sp "Invalid HTML tag"
+        <?> sprintf "Invalid HTML tag"
       in
       let* attributes = attributes in
       let void = is_void tag_name in
@@ -104,7 +111,7 @@ let node =
       in
       let closing_tag =
         string "</" *> string tag_name *> skip_ws 0 *> char '>'
-        <?> sp "Closing tag '</%s>' missing." tag_name
+        <?> sprintf "Closing tag '</%s>' missing." tag_name
       in
       (if void
       then pure @@ Void { tag_name; attributes }
@@ -118,60 +125,46 @@ let node =
 
 let parse s =
   let p =
-    let* doctype_txt = optional doctype in
+    let* doctype = doctype in
     let+ root = node in
-    doctype_txt, root
+    T { doctype; root }
   in
   P.parse_string p s
 ;;
 
 module E = Easy_format
 
-let element_style =
+let list_style =
   { E.list with
     wrap_body = `Force_breaks
   ; space_after_opening = false
+  ; space_after_separator = false
+  ; space_before_separator = false
   ; space_before_closing = false
   ; separators_stick_left = false
   ; align_closing = true
   }
 ;;
 
-let attribute_style =
-  { E.list with
-    wrap_body = `Never_wrap
-  ; space_after_opening = false
-  ; space_before_closing = false
-  ; separators_stick_left = false
-  ; align_closing = true
-  }
-;;
+let atom' v = E.Atom (v, E.atom)
 
 let rec format_node = function
-  | Text txt -> E.Atom (txt, E.atom)
+  | Text txt -> atom' txt
   | Element { tag_name; children; attributes } ->
-    let attributes = List.map format_attribute attributes in
     let children = List.map format_node children in
     if List.length attributes = 0
-    then
-      E.List (("<" ^ tag_name ^ ">", "", "</" ^ tag_name ^ ">", element_style), children)
+    then E.List (("<" ^ tag_name ^ ">", "", "</" ^ tag_name ^ ">", list_style), children)
     else (
-      let style = { element_style with wrap_body = `No_breaks } in
-      let start_tag = E.List (("<" ^ tag_name ^ " ", "", ">", style), attributes) in
-      let children = E.List (("", "", "", element_style), children) in
-      let end_tag = E.Atom ("</" ^ tag_name ^ ">", E.atom) in
-      E.List (("", "", "", element_style), [ start_tag; children; end_tag ]))
+      let attributes' = List.map format_attribute attributes |> String.concat " " in
+      let open_tag = sprintf "<%s %s>" tag_name attributes' in
+      let end_tag = sprintf "</%s>" tag_name in
+      E.List ((open_tag, "", end_tag, list_style), children))
   | _ -> failwith "not implemented"
 
 and format_attribute (Attr (attr_name, attr_val)) =
-  let style = { element_style with wrap_body = `No_breaks } in
-  let attr_val =
-    match attr_val with
-    | Some v -> E.Atom (v, E.atom)
-    | None -> E.Atom ("", E.atom)
-  in
-  E.List
-    (("", "", "", style), [ E.Atom (attr_name, E.atom); E.Atom ("=", E.atom); attr_val ])
+  match attr_val with
+  | Some attr_val -> sprintf {|%s="%s"|} attr_name attr_val
+  | None -> ""
 ;;
 
 module F = Format
