@@ -1,4 +1,4 @@
-## Pretty-printer or formatter for HTML5
+## Pretty-printer, formatter for HTML5
 
 ## Example
 ```ocaml 
