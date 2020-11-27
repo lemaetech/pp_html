@@ -183,7 +183,7 @@ let pp fmt (T { doctype; root }) =
     | Some s ->
       E.List
         ( ("", "", "", list_style)
-        , [ atom' @@ sprintf "<!DOCTYPE %s>" s; format_node root ] )
+        , [ atom' @@ sprintf "<!DOCTYPE %s>" s; atom' ""; format_node root ] )
     | None -> format_node root
   in
   E.Pretty.to_formatter fmt doc
