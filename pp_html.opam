@@ -5,8 +5,8 @@ synopsis: "Pretty prints html5"
 maintainer: ["Bikal Lem"]
 authors: ["Bikal Lem, <gbikal@gmail.com>"]
 license: "MPL-2.0"
-homepage: "https://github.com/bikallem/gilung"
-bug-reports: "https://github.com/bikallem/gilung/issues"
+homepage: "https://github.com/bikallem/pp_html"
+bug-reports: "https://github.com/bikallem/pp_html/issues"
 depends: [
   "dune" {>= "2.7"}
   "ocaml" {>= "4.11.1"}
@@ -29,4 +29,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/bikallem/gilung.git"
+dev-repo: "git+https://github.com/bikallem/pp_html.git"

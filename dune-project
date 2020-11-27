@@ -7,7 +7,7 @@
 (generate_opam_files true)
 
 (source
- (github bikallem/gilung))
+ (github bikallem/pp_html))
 
 (license MPL-2.0)
 
