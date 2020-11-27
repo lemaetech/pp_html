@@ -9,7 +9,7 @@ let () =
   |> Pp_html.pp ~indent:4 Format.std_formatter
 ;;
 ```
-The above formats the following HTML5.
+The above code produces the following formatted HTML5.
 ```html
 <!DOCTYPE html>
 
