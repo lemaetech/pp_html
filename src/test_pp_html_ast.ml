@@ -46,6 +46,8 @@ let%expect_test "text, nodes, comments, children " =
     <!DOCTYPE html>
     <html>
       <body>
+        <br/>
+        <hr/>
         <div class="class1" id="id1">
           Hello World!
         </div>
