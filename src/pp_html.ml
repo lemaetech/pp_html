@@ -37,8 +37,6 @@ let sprintf = Printf.sprintf
 let ws = any [ htab; lf; char '\x0C'; cr; space ]
 let skip_ws at_least = skip ~at_least ws
 
-(* let skip_ws_no_space = skip (any [ htab; lf; char '\x0C'; cr ]) *)
-
 let comments =
   take_between ~start:(string "<!--") ~end_:(string "-->") next
   >>= string_of_chars
