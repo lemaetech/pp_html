@@ -1,7 +1,7 @@
 (library
  (name pp_html)
  (public_name pp_html)
- (libraries reparse)
+ (libraries reparse sexplib sexp_pretty)
  (inline_tests)
  (preprocess
-  (pps ppx_expect)))
+  (pps ppx_expect ppx_sexp_conv)))

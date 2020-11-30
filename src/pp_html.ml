@@ -10,6 +10,7 @@
 
 open Reparse.Parser
 open Infix
+open Sexplib.Std
 
 type t =
   | T of
@@ -30,10 +31,13 @@ and node =
       ; children : node list
       }
 
-and attribute = Attr of (string * string option) [@@unboxed]
+and attribute = Attr of (string * string option) [@@unboxed] [@@deriving sexp_of]
 
 let sprintf = Printf.sprintf
-let skip_ws at_least = skip ~at_least (any [ htab; lf; char '\x0C'; cr; space ])
+let ws = any [ htab; lf; char '\x0C'; cr; space ]
+let skip_ws at_least = skip ~at_least ws
+
+(* let skip_ws_no_space = skip (any [ htab; lf; char '\x0C'; cr ]) *)
 
 let comments =
   take_between ~start:(string "<!--") ~end_:(string "-->") next
@@ -42,12 +46,12 @@ let comments =
 ;;
 
 let doctype =
-  optional
-  @@ (take_between
-        next
-        ~start:(string ~case_sensitive:false "<!DOCTYPE" *> skip_ws 1)
-        ~end_:(char '>')
-     >>= string_of_chars)
+  take_between
+    next
+    ~start:(string ~case_sensitive:false "<!DOCTYPE" *> skip_ws 1)
+    ~end_:(char '>')
+  >>= string_of_chars
+  |> optional
 ;;
 
 let text =
@@ -55,33 +59,46 @@ let text =
   if String.length txt > 0 then pure @@ Text txt else fail "Invalid HTML text node"
 ;;
 
-let attributes =
-  let attribute =
-    let illegal_attr_name_char =
-      char_if (function
-          | '\x00' .. '\x1F' | '\x7F' .. '\x9F' | ' ' | '"' | '\'' | '>' | '/' | '=' ->
-            true
-          | _ -> false)
-    in
-    let* attr_name =
-      take_while next ~while_:(is_not illegal_attr_name_char) >>= string_of_chars
-    in
-    let+ attr_val =
-      (let* () = skip_ws 0 *> char '=' *> skip_ws 0 *> unit in
-       let* delimiter = optional @@ any [ char '"'; char '\'' ] in
-       match delimiter with
-       | Some c ->
-         take_while next ~while_:(is_not @@ char c) <* char c >>= string_of_chars
-       | None -> take_while next ~while_:(is_not space) >>= string_of_chars)
-      |> optional
-    in
-    Attr (attr_name, attr_val)
+let attribute =
+  let illegal_attr_name_char =
+    char_if (function
+        | '\x00' .. '\x1F' | '\x7F' .. '\x9F' | ' ' | '"' | '\'' | '>' | '/' | '=' -> true
+        | _ -> false)
   in
-  optional @@ skip_ws 1
-  >>= function
-  | Some _ -> take attribute ~sep_by:space
-  | None -> pure []
+  let* () = skip_ws 1 *> unit in
+  let* attr_name =
+    let* name = take_while next ~while_:(is_not illegal_attr_name_char) in
+    if List.length name = 0
+    then fail "Attribute name is required!"
+    else string_of_chars name
+  in
+  let* has_equal = is (skip_ws 0 *> char '=') in
+  let+ attr_val =
+    if has_equal
+    then (
+      let quoted_attr_val =
+        let* c = any [ char '"'; char '\'' ] in
+        take_while next ~while_:(is_not @@ char c) <* char c >>= string_of_chars
+      in
+      let unquoted_attr_val =
+        let excluded_unquoted_attr_val_char =
+          any [ ws; char '"'; char '\''; char '='; char '<'; char '>'; char '`' ]
+        in
+        let* attr_val =
+          take_while next ~while_:(is_not excluded_unquoted_attr_val_char)
+        in
+        if List.length attr_val = 0
+        then fail "Unquoted attribute value can't be an empty string."
+        else string_of_chars attr_val
+      in
+      skip_ws 0 *> char '=' *> skip_ws 0 *> any [ quoted_attr_val; unquoted_attr_val ]
+      >|= Option.some)
+    else pure None
+  in
+  Attr (attr_name, attr_val)
 ;;
+
+let attributes = take attribute
 
 let node =
   (* Void elements - https://html.spec.whatwg.org/multipage/syntax.html#void-elements *)
@@ -142,13 +159,12 @@ let parse s =
 
 module F = Format
 
-let pp_attribute fmt (Attr (attr_name, attr_val)) =
-  match attr_val with
-  | Some v -> F.fprintf fmt {| %s="%s"|} attr_name v
-  | None -> F.fprintf fmt " %s" attr_name
-;;
-
 let pp_attributes fmt attributes =
+  let pp_attribute fmt (Attr (attr_name, attr_val)) =
+    match attr_val with
+    | Some v -> F.fprintf fmt {| %s="%s"|} attr_name v
+    | None -> F.fprintf fmt " %s" attr_name
+  in
   let pp_attributes = F.pp_print_list pp_attribute in
   F.open_vbox 0;
   F.fprintf fmt "%a" pp_attributes attributes;
@@ -163,7 +179,7 @@ let pp_doctype fmt = function
 let pp ?(indent = 2) fmt (T { doctype; root }) =
   let rec pp_node fmt = function
     | Text txt -> F.fprintf fmt "%s" txt
-    | Comments comments -> F.fprintf fmt "@;<!-- %s -->@;" comments
+    | Comments comments -> F.fprintf fmt "@;<!-- %s -->" comments
     | Void { tag_name; attributes = [] } -> F.fprintf fmt "<%s />" tag_name
     | Void { tag_name; attributes } ->
       F.open_vbox indent;
@@ -171,21 +187,15 @@ let pp ?(indent = 2) fmt (T { doctype; root }) =
       pp_attributes fmt attributes;
       F.fprintf fmt "/>";
       F.close_box ()
-    | Element { tag_name; attributes = []; children = [] } ->
-      F.fprintf fmt "@[<h><%s></%s>@]" tag_name tag_name
-    | Element { tag_name; attributes = []; children } ->
-      let pp_children = F.pp_print_list pp_node in
-      F.open_vbox indent;
-      F.fprintf fmt "<%s>@,%a" tag_name pp_children children;
-      F.print_break 0 (-indent);
-      F.fprintf fmt "</%s>" tag_name;
-      F.close_box ()
     | Element { tag_name; attributes; children } ->
       let pp_children = F.pp_print_list pp_node in
       F.open_vbox indent;
-      F.fprintf fmt "<%s%a>@,%a" tag_name pp_attributes attributes pp_children children;
+      F.fprintf fmt "<%s" tag_name;
+      if List.length attributes > 0 then F.fprintf fmt "%a" pp_attributes attributes;
+      F.fprintf fmt ">";
+      if List.length children > 0 then F.fprintf fmt "@,%a" pp_children children;
       F.print_break 0 (-indent);
-      F.fprintf fmt "<%s>" tag_name;
+      F.fprintf fmt "</%s>" tag_name;
       F.close_box ()
   in
   F.open_vbox 0;
@@ -196,15 +206,61 @@ let pp ?(indent = 2) fmt (T { doctype; root }) =
   F.close_box ()
 ;;
 
+(* ---- Unit tests ---- *)
+
+let () = Printexc.record_backtrace false
+
+let pp_ast sexp =
+  let open Sexp_pretty in
+  let config = Config.update ~color:false Config.default in
+  pp_formatter config Format.std_formatter sexp
+;;
+
+let%expect_test "attribute: unquoted" =
+  parse_string attribute {| attr3=att3val|} |> sexp_of_attribute |> pp_ast;
+  [%expect {|
+    (Attr (attr3 (att3val))) |}]
+;;
+
+let%expect_test "attribute: double quoted" =
+  parse_string attribute {| attr3="att3val"|} |> sexp_of_attribute |> pp_ast;
+  [%expect {|
+    (Attr (attr3 (att3val))) |}]
+;;
+
+let%expect_test "attribute: single quoted" =
+  parse_string attribute {| attr3='val3'|} |> sexp_of_attribute |> pp_ast;
+  [%expect {|
+    (Attr (attr3 (val3))) |}]
+;;
+
+let%expect_test "attributes: double quoted, single quoted and unquoted" =
+  parse_string attributes {| attr3 = att3val class="class1" id = 'id1'    |}
+  |> sexp_of_list sexp_of_attribute
+  |> pp_ast;
+  [%expect
+    {|
+    ((Attr (attr3 (att3val)))
+     (Attr (class (class1)))
+     (Attr (id    (id1)))) |}]
+;;
+
 let test_pp s =
   let doc = parse s in
   pp ~indent:4 Format.std_formatter doc
 ;;
 
 let%expect_test "PPrint: text, nodes, comments, children " =
-  Printexc.record_backtrace false;
   test_pp
-    {|<!DOCTYPE html><html><body><br> <hr class="class1" id="id1"/><!-- This is a comment --> <div class="class1" id="id1">Hello World!</div><div></div></body></html>|};
+    {|<!DOCTYPE html><html><body><br> 
+    <hr class="class1" id="id1"/>
+    <!-- This is a comment --> 
+     <div class="class1"     id ='id1' style="align: center" enabled>Hello World!</div>
+     <div></div>
+     <div disabled id   =   hello id = 
+      hello2 id3 = 
+       hello3></div>
+    </body></html>|};
   [%expect
     {|
     <!DOCTYPE html>
@@ -216,12 +272,19 @@ let%expect_test "PPrint: text, nodes, comments, children " =
                 id="id1"/>
 
             <!--  This is a comment  -->
-
             <div class="class1"
-                 id="id1">
+                 id="id1"
+                 style="align: center"
+                 enabled>
                 Hello World!
+            </div>
             <div>
-            <div></div>
+            </div>
+            <div disabled
+                 id="hello"
+                 id="hello2"
+                 id3="hello3">
+            </div>
         </body>
     </html> |}]
 ;;
