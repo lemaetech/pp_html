@@ -8,7 +8,7 @@
  * %%NAME%% %%VERSION%%
  *-------------------------------------------------------------------------*)
 
-open Reparse.Parser
+open Reparse
 open Infix
 open Sexplib.Std
 
@@ -40,7 +40,7 @@ let skip_ws at_least = skip ~at_least ws
 let comments =
   take_between ~start:(string "<!--") ~end_:(string "-->") next
   >>= string_of_chars
-  >|= fun s -> Comments s
+  >>| fun s -> Comments s
 ;;
 
 let doctype =
@@ -54,7 +54,7 @@ let doctype =
 
 let text =
   let* txt = take_while next ~while_:(is_not @@ char '<') >>= string_of_chars in
-  if String.length txt > 0 then pure @@ Text txt else fail "Invalid HTML text node"
+  if String.length txt > 0 then return @@ Text txt else fail "Invalid HTML text node"
 ;;
 
 let attribute =
@@ -90,8 +90,8 @@ let attribute =
         else string_of_chars attr_val
       in
       skip_ws 0 *> char '=' *> skip_ws 0 *> any [ quoted_attr_val; unquoted_attr_val ]
-      >|= Option.some)
-    else pure None
+      >>| Option.some)
+    else return None
   in
   Attr (attr_name, attr_val)
 ;;
@@ -137,7 +137,7 @@ let node =
         <?> sprintf "Closing tag '</%s>' missing." tag_name
       in
       (if void
-      then pure @@ Void { tag_name; attributes }
+      then return @@ Void { tag_name; attributes }
       else
         let+ children =
           take @@ (any [ comments; node; text ] <* skip_ws 0) <* closing_tag
