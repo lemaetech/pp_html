@@ -2,6 +2,5 @@
  (name pp_html)
  (public_name pp_html)
  (libraries reparse sexplib sexp_pretty)
- (inline_tests)
  (preprocess
   (pps ppx_jane)))
