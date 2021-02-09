@@ -44,10 +44,11 @@ let comments =
 ;;
 
 let doctype =
-  take_between
-    next
-    ~start:(string ~case_sensitive:false "<!DOCTYPE" *> skip_ws 1)
-    ~end_:(char '>')
+  skip_ws 0
+  *> take_between
+       next
+       ~start:(string ~case_sensitive:false "<!DOCTYPE" *> skip_ws 1)
+       ~end_:(char '>')
   >>= string_of_chars
   |> optional
 ;;

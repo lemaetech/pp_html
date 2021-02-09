@@ -58,9 +58,22 @@ let%expect_test "attributes: double quoted, single quoted and unquoted" =
         (children ())))) |}]
 ;;
 
+let%expect_test "attributes: double quoted, single quoted and unquoted" =
+  pp {|  <!DOCTYPE html><div></div> |};
+  [%expect
+    {|
+    (T
+      (doctype (html))
+      (root (
+        Element
+        (tag_name div)
+        (attributes ())
+        (children   ())))) |}]
+;;
+
 let test_pp s =
   let doc = Pp_html.parse s in
-  Pp_html.pp ~indent:4 Format.std_formatter doc
+  Pp_html.pp ~indent:2 Format.std_formatter doc
 ;;
 
 let%expect_test "PPrint: text, nodes, comments, children " =
@@ -80,35 +93,113 @@ hello3><div>content<div>inner<span>asdfasdfasdfasdfasdfasdfasdfasdf
     <!DOCTYPE html>
 
     <html>
-        <body>
-            <br />
-            <hr class="class1"
-                id="id1"/>
+      <body>
+        <br />
+        <hr class="class1"
+            id="id1"/>
 
-            <!--  This is a comment  -->
-            <div class="class1"
-                 id="id1"
-                 style="align: center"
-                 enabled>
-                Hello World!
-            </div>
+        <!--  This is a comment  -->
+        <div class="class1"
+             id="id1"
+             style="align: center"
+             enabled>
+          Hello World!
+        </div>
+        <div>
+        </div>
+        <div disabled
+             id="hello"
+             id="hello2"
+             id3="hello3">
+          <div>
+            content
             <div>
-            </div>
-            <div disabled
-                 id="hello"
-                 id="hello2"
-                 id3="hello3">
-                <div>
-                    content
-                    <div>
-                        inner
-                        <span>
-                            asdfasdfasdfasdfasdfasdfasdfasdf
+              inner
+              <span>
+                asdfasdfasdfasdfasdfasdfasdfasdf
 
-                        </span>
-                    </div>
-                </div>
+              </span>
             </div>
-        </body>
+          </div>
+        </div>
+      </body>
+    </html> |}]
+;;
+
+let%expect_test _ =
+  test_pp
+    {|<!DOCTYPE html>
+  <html>
+    <body class="body"
+          id="main"
+          name="bikal">
+      <div disabled>
+        Hello world
+        Bikal Lem
+      </div>
+      <div>
+        Hello
+      </div>
+      <div>
+        Second child
+      </div>
+      Third child
+      <div id="bikal">
+        <span>
+          1223
+</span>
+<span>
+                 1234.4
+               </span><p>
+                        First paragrapah
+                      </p><p>
+                            Second paragraph
+                          </p>
+      </div>
+    </body>
+</html>
+|};
+  [%expect
+    {|
+    <!DOCTYPE html>
+
+    <html>
+      <body class="body"
+            id="main"
+            name="bikal">
+        <div disabled>
+          Hello world
+            Bikal Lem
+
+        </div>
+        <div>
+          Hello
+
+        </div>
+        <div>
+          Second child
+
+        </div>
+        Third child
+
+        <div id="bikal">
+          <span>
+            1223
+
+          </span>
+          <span>
+            1234.4
+
+          </span>
+          <p>
+            First paragrapah
+
+          </p>
+          <p>
+            Second paragraph
+
+          </p>
+        </div>
+      </body>
     </html> |}]
 ;;
