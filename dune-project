@@ -21,6 +21,7 @@
  (depends
   (ocaml
    (>= 4.11.1))
+  core
   reparse
   sexplib
   sexp_pretty

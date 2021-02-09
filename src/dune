@@ -1,6 +1,6 @@
 (library
  (name pp_html)
  (public_name pp_html)
- (libraries reparse sexplib sexp_pretty)
+ (libraries reparse sexplib sexp_pretty core)
  (preprocess
   (pps ppx_jane)))

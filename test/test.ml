@@ -117,7 +117,6 @@ hello3><div>content<div>inner<span>asdfasdfasdfasdfasdfasdfasdfasdf
               inner
               <span>
                 asdfasdfasdfasdfasdfasdfasdfasdf
-
               </span>
             </div>
           </div>
@@ -170,35 +169,58 @@ let%expect_test _ =
         <div disabled>
           Hello world
             Bikal Lem
-
         </div>
         <div>
           Hello
-
         </div>
         <div>
           Second child
-
         </div>
         Third child
-
         <div id="bikal">
           <span>
             1223
-
           </span>
           <span>
             1234.4
-
           </span>
           <p>
             First paragrapah
-
           </p>
           <p>
             Second paragraph
-
           </p>
+        </div>
+      </body>
+    </html> |}]
+;;
+
+let%expect_test _ =
+  test_pp
+    {|
+      <!DOCTYPE html><html><body class="body" id="main" name="bikal">
+<div class="field"><label></label><br />
+
+Hello
+
+
+<input name="Bikal"
+id="Lem"/></div></body></html> |};
+  [%expect
+    {|
+    <!DOCTYPE html>
+
+    <html>
+      <body class="body"
+            id="main"
+            name="bikal">
+        <div class="field">
+          <label>
+          </label>
+          <br />
+          Hello
+          <input name="Bikal"
+                 id="Lem"/>
         </div>
       </body>
     </html> |}]

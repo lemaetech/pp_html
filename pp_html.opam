@@ -10,6 +10,7 @@ bug-reports: "https://github.com/bikallem/pp_html/issues"
 depends: [
   "dune" {>= "2.7"}
   "ocaml" {>= "4.11.1"}
+  "core"
   "reparse"
   "sexplib"
   "sexp_pretty"

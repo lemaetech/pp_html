@@ -9,8 +9,7 @@
  *-------------------------------------------------------------------------*)
 
 open Reparse
-open Infix
-open Sexplib.Std
+open Core
 
 type t =
   | T of
@@ -54,7 +53,8 @@ let doctype =
 ;;
 
 let text =
-  let* txt = take_while next ~while_:(is_not @@ char '<') >>= string_of_chars in
+  let%bind txt = take_while next ~while_:(is_not @@ char '<') >>= string_of_chars in
+  let txt = String.strip txt in
   if String.length txt > 0 then return @@ Text txt else fail "Invalid HTML text node"
 ;;
 
@@ -64,26 +64,26 @@ let attribute =
         | '\x00' .. '\x1F' | '\x7F' .. '\x9F' | ' ' | '"' | '\'' | '>' | '/' | '=' -> true
         | _ -> false)
   in
-  let* () = skip_ws 1 *> unit in
-  let* attr_name =
-    let* name = take_while next ~while_:(is_not illegal_attr_name_char) in
+  let%bind () = skip_ws 1 *> unit in
+  let%bind attr_name =
+    let%bind name = take_while next ~while_:(is_not illegal_attr_name_char) in
     if List.length name = 0
     then fail "Attribute name is required!"
     else string_of_chars name
   in
-  let* has_equal = is (skip_ws 0 *> char '=') in
-  let+ attr_val =
+  let%bind has_equal = is (skip_ws 0 *> char '=') in
+  let%map attr_val =
     if has_equal
     then (
       let quoted_attr_val =
-        let* c = any [ char '"'; char '\'' ] in
+        let%bind c = any [ char '"'; char '\'' ] in
         take_while next ~while_:(is_not @@ char c) <* char c >>= string_of_chars
       in
       let unquoted_attr_val =
         let excluded_unquoted_attr_val_char =
           any [ ws; char '"'; char '\''; char '='; char '<'; char '>'; char '`' ]
         in
-        let* attr_val =
+        let%bind attr_val =
           take_while next ~while_:(is_not excluded_unquoted_attr_val_char)
         in
         if List.length attr_val = 0
@@ -123,15 +123,17 @@ let node =
          tag_name - https://html.spec.whatwg.org/multipage/syntax.html#syntax-tag-name
          start_tags - https://html.spec.whatwg.org/multipage/syntax.html#start-tags
       *)
-      let* tag_name =
+      let%bind tag_name =
         skip_ws 0 *> char '<' *> take alpha_num
         >>= string_of_chars
         <?> sprintf "Invalid HTML tag"
       in
-      let* attributes = attributes in
+      let%bind attributes = attributes in
       let void = is_void tag_name in
-      let* () =
-        (if void then (optional @@ char '/') *> unit else unit) <* char '>' <* skip_ws 0
+      let%bind () =
+        (if void then skip_ws 0 *> (optional @@ char '/') *> unit else unit)
+        <* char '>'
+        <* skip_ws 0
       in
       let closing_tag =
         string "</" *> string tag_name *> skip_ws 0 *> char '>'
@@ -139,18 +141,18 @@ let node =
       in
       (if void
       then return @@ Void { tag_name; attributes }
-      else
-        let+ children =
+      else (
+        let%map children =
           take @@ (any [ comments; node; text ] <* skip_ws 0) <* closing_tag
         in
-        Element { tag_name; attributes; children })
+        Element { tag_name; attributes; children }))
       <* skip_ws 0)
 ;;
 
 let parse s =
   let p =
-    let* doctype = doctype in
-    let+ root = node in
+    let%bind doctype = doctype in
+    let%map root = node in
     T { doctype; root }
   in
   parse_string p s
