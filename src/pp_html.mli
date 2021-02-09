@@ -9,7 +9,7 @@
  *-------------------------------------------------------------------------*)
 
 (** Represents parsed HTML. *)
-type t
+type t [@@deriving sexp_of]
 
 (** [parse s] returns a parsed instance of [s] *)
 val parse : string -> t
