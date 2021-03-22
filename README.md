@@ -1,6 +1,6 @@
 ## Pretty-printer, formatter for HTML5 (Unreleased and not production ready)
 
-**Note - The parser hasn't been validated against HTML5 RFC. It is mostly used as a guidance for the use case of pretty-printing HTML/HTML5 like data.**
+Note - The parser hasn't been validated against HTML5 RFC.
 
 ## Example
 ```ocaml 
